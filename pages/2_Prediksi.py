@@ -2,13 +2,11 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-import pickle
-from tensorflow.keras.models import load_model as keras_load_model
 from sklearn.metrics import mean_absolute_error, mean_squared_error
 import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
-from utils.data_loader import load_data, load_lstm_results, load_prophet_model
+from utils.data_loader import load_data, load_lstm_results, load_prophet_model, load_lstm_model_and_scaler
 
 st.set_page_config(page_title="Prediksi - IHSG", page_icon="🤖", layout="wide")
 st.title("🤖 Prediksi IHSG")
@@ -34,7 +32,7 @@ forecast_prophet = prophet_data['forecast']
 prophet_pred   = forecast_prophet['yhat'].values
 prophet_actual = test_prophet['y'].values
 
-# ── Fungsi Evaluasi ───────────────────────────────────────────
+# ── Evaluasi ─────────────────────────────────────────────────
 def evaluate(actual, pred):
     mae  = mean_absolute_error(actual, pred)
     rmse = np.sqrt(mean_squared_error(actual, pred))
@@ -44,9 +42,7 @@ def evaluate(actual, pred):
 mae_l, rmse_l, mape_l = evaluate(lstm_actual, lstm_pred)
 mae_p, rmse_p, mape_p = evaluate(prophet_actual, prophet_pred)
 
-# ══════════════════════════════════════════════════════════════
-# HASIL EVALUASI MODEL
-# ══════════════════════════════════════════════════════════════
+# ── Metrik ───────────────────────────────────────────────────
 st.subheader("Hasil Evaluasi Model")
 
 col1, col2 = st.columns(2)
@@ -61,26 +57,24 @@ with col1:
 with col2:
     st.markdown("#### 🟢 Prophet")
     m1, m2, m3 = st.columns(3)
-    m1.metric("MAE",  f"{mae_p:.2f}",  delta=f"{mae_l  - mae_p:.2f}",  delta_color="normal")
+    m1.metric("MAE",  f"{mae_p:.2f}", delta=f"{mae_l - mae_p:.2f}",   delta_color="normal")
     m2.metric("RMSE", f"{rmse_p:.2f}", delta=f"{rmse_l - rmse_p:.2f}", delta_color="normal")
-    m3.metric("MAPE", f"{mape_p:.2f}%",delta=f"{mape_l - mape_p:.2f}%",delta_color="normal")
+    m3.metric("MAPE", f"{mape_p:.2f}%", delta=f"{mape_l - mape_p:.2f}%", delta_color="normal")
 
 st.caption("Delta pada Prophet menunjukkan selisih terhadap LSTM. Nilai positif = Prophet lebih baik.")
 
 st.divider()
 
-# ══════════════════════════════════════════════════════════════
-# VISUALISASI LSTM
-# ══════════════════════════════════════════════════════════════
+# ── Visualisasi LSTM ─────────────────────────────────────────
 st.subheader("Prediksi LSTM")
 
 fig, ax = plt.subplots(figsize=(14, 4))
-ax.plot(train_index,     train_actual,
-        label='Train',            color='steelblue',  linewidth=0.8)
+ax.plot(train_index, train_actual,
+        label='Train', color='steelblue', linewidth=0.8)
 ax.plot(lstm_test_index, lstm_actual,
-        label='Aktual (Test)',    color='black',      linewidth=1)
+        label='Aktual (Test)', color='black', linewidth=1)
 ax.plot(lstm_test_index, lstm_pred,
-        label='Prediksi LSTM',   color='darkorange', linewidth=1.2, linestyle='--')
+        label='Prediksi LSTM', color='darkorange', linewidth=1.2, linestyle='--')
 ax.set_title('Prediksi IHSG - LSTM')
 ax.set_xlabel('Tanggal')
 ax.set_ylabel('Harga Close')
@@ -91,18 +85,16 @@ st.pyplot(fig)
 
 st.divider()
 
-# ══════════════════════════════════════════════════════════════
-# VISUALISASI PROPHET
-# ══════════════════════════════════════════════════════════════
+# ── Visualisasi Prophet ──────────────────────────────────────
 st.subheader("Prediksi Prophet")
 
 fig, ax = plt.subplots(figsize=(14, 4))
 ax.plot(train_prophet['ds'], train_prophet['y'],
-        label='Train',             color='steelblue',     linewidth=0.8)
-ax.plot(test_prophet['ds'],  prophet_actual,
-        label='Aktual (Test)',     color='black',         linewidth=1)
-ax.plot(test_prophet['ds'],  prophet_pred,
-        label='Prediksi Prophet',  color='mediumseagreen',linewidth=1.2, linestyle='--')
+        label='Train', color='steelblue', linewidth=0.8)
+ax.plot(test_prophet['ds'], prophet_actual,
+        label='Aktual (Test)', color='black', linewidth=1)
+ax.plot(test_prophet['ds'], prophet_pred,
+        label='Prediksi Prophet', color='mediumseagreen', linewidth=1.2, linestyle='--')
 ax.fill_between(
     test_prophet['ds'],
     forecast_prophet['yhat_lower'].values,
@@ -119,18 +111,16 @@ st.pyplot(fig)
 
 st.divider()
 
-# ══════════════════════════════════════════════════════════════
-# PERBANDINGAN OVERLAY
-# ══════════════════════════════════════════════════════════════
+# ── Perbandingan Overlay ─────────────────────────────────────
 st.subheader("Perbandingan LSTM vs Prophet (Periode Test)")
 
 fig, ax = plt.subplots(figsize=(14, 4))
-ax.plot(lstm_test_index,    lstm_actual,
-        label='Aktual',  color='black',         linewidth=1)
-ax.plot(lstm_test_index,    lstm_pred,
-        label='LSTM',    color='darkorange',    linewidth=1.1, linestyle='--')
+ax.plot(lstm_test_index, lstm_actual,
+        label='Aktual', color='black', linewidth=1)
+ax.plot(lstm_test_index, lstm_pred,
+        label='LSTM', color='darkorange', linewidth=1.1, linestyle='--')
 ax.plot(test_prophet['ds'], prophet_pred,
-        label='Prophet', color='mediumseagreen',linewidth=1.1, linestyle='--')
+        label='Prophet', color='mediumseagreen', linewidth=1.1, linestyle='--')
 ax.set_title('LSTM vs Prophet — Periode Test')
 ax.set_xlabel('Tanggal')
 ax.set_ylabel('Harga Close')
@@ -141,9 +131,7 @@ st.pyplot(fig)
 
 st.divider()
 
-# ══════════════════════════════════════════════════════════════
-# TABEL RINGKASAN
-# ══════════════════════════════════════════════════════════════
+# ── Tabel Ringkasan ──────────────────────────────────────────
 st.subheader("Tabel Ringkasan")
 
 summary = pd.DataFrame({
@@ -157,19 +145,12 @@ st.dataframe(summary, use_container_width=True, hide_index=True)
 st.divider()
 
 # ══════════════════════════════════════════════════════════════
-# FORECAST HARI KE DEPAN
+# FORECAST FUTURE
 # ══════════════════════════════════════════════════════════════
 st.subheader("🔮 Forecast Hari ke Depan")
 st.markdown("Prediksi harga IHSG untuk beberapa hari ke depan dari data terakhir yang tersedia.")
 
-n_days = st.slider("Jumlah hari yang ingin diprediksi", min_value=1, max_value=7, value=7)
-
-# ← TAMBAHKAN DI SINI
-st.warning(
-    "⚠️ **Catatan:** LSTM menggunakan prediksi *recursive* — output hari sebelumnya "
-    "menjadi input hari berikutnya. Akurasi menurun seiring bertambahnya horizon prediksi. "
-    "Hasil forecast ini bersifat ilustratif dan tidak dapat dijadikan rekomendasi investasi."
-)
+n_days = st.slider("Jumlah hari yang ingin diprediksi", min_value=1, max_value=30, value=7)
 
 # ── Data historis lengkap ─────────────────────────────────────
 close_recent = df['Close']['2020-01-01':].copy()
@@ -178,131 +159,55 @@ last_date    = close_recent.index[-1]
 # Buat tanggal hari kerja ke depan (skip Sabtu & Minggu)
 future_dates = pd.bdate_range(start=last_date + pd.Timedelta(days=1), periods=n_days)
 
-# ══════════════════════════════════════════════════════════════
-# LSTM RECURSIVE FORECAST (MULTIVARIATE)
-# ══════════════════════════════════════════════════════════════
+# ── LSTM Recursive Forecast ───────────────────────────────────
 LOOK_BACK = lstm_results.get('look_back', 60)
-SEED_SIZE = LOOK_BACK + 30   # buffer ekstra agar rolling window stabil
+model_lstm_future, scaler_future = load_lstm_model_and_scaler()
 
-# Load scaler & model
-with open('models/scaler.pkl', 'rb') as f:
-    scaler_future = pickle.load(f)          # scaler 4 fitur (Close, MA_5, RSI_14, MACD)
+# Seed: 60 hari terakhir dari data historis
+seed_prices  = close_recent.values[-LOOK_BACK:].reshape(-1, 1)
+seed_scaled  = scaler_future.transform(seed_prices)
+current_seq  = seed_scaled.flatten().tolist()
 
-with open('models/scaler_close.pkl', 'rb') as f:
-    scaler_close_future = pickle.load(f)    # scaler khusus Close untuk inverse transform
-
-model_lstm_future = keras_load_model('models/lstm_model.keras')
-
-# ── Helper: hitung 4 fitur dari array Close ──────────────────
-def compute_indicators_forecast(close_arr: np.ndarray) -> np.ndarray:
-    """
-    Input  : 1-D numpy array berisi harga Close
-    Output : numpy array shape (n, 4) → [Close, MA_5, RSI_14, MACD]
-    """
-    s = pd.Series(close_arr)
-
-    ma5    = s.rolling(5).mean().bfill()
-
-    delta  = s.diff()
-    gain   = delta.where(delta > 0, 0).rolling(14).mean().bfill()
-    loss   = (-delta.where(delta < 0, 0)).rolling(14).mean().bfill()
-    rsi    = (100 - (100 / (1 + gain / loss))).bfill()
-
-    ema12  = s.ewm(span=12, adjust=False).mean()
-    ema26  = s.ewm(span=26, adjust=False).mean()
-    macd   = ema12 - ema26
-
-    return pd.DataFrame({
-        'Close' : s.values,
-        'MA_5'  : ma5.values,
-        'RSI_14': rsi.values,
-        'MACD'  : macd.values,
-    }).values   # shape (n, 4)
-
-# ── Recursive forecast ────────────────────────────────────────
-running_close     = list(close_recent.values[-SEED_SIZE:])
 lstm_future_preds = []
-
 for _ in range(n_days):
-    # Hitung 4 fitur dari running history
-    features_arr     = compute_indicators_forecast(np.array(running_close))
-    last_60_scaled   = scaler_future.transform(features_arr[-LOOK_BACK:])   # (60, 4)
-    x_input          = last_60_scaled.reshape(1, LOOK_BACK, 4)              # (1, 60, 4)
+    x_input = np.array(current_seq[-LOOK_BACK:]).reshape(1, LOOK_BACK, 1)
+    pred_scaled = model_lstm_future.predict(x_input, verbose=0)[0][0]
+    lstm_future_preds.append(pred_scaled)
+    current_seq.append(pred_scaled)
 
-    # Prediksi dalam skala Close yang ternormalisasi
-    pred_scaled      = model_lstm_future.predict(x_input, verbose=0)[0][0]
+lstm_future_preds = scaler_future.inverse_transform(
+    np.array(lstm_future_preds).reshape(-1, 1)
+).flatten()
 
-    # Inverse transform ke harga asli
-    pred_close       = scaler_close_future.inverse_transform([[pred_scaled]])[0][0]
-
-    lstm_future_preds.append(pred_close)
-    running_close.append(pred_close)    # masukkan hasil prediksi ke history
-
-lstm_future_preds = np.array(lstm_future_preds)
-
-# ══════════════════════════════════════════════════════════════
-# PROPHET FUTURE FORECAST
-# ══════════════════════════════════════════════════════════════
-
-# ── Helper: hitung indikator untuk Prophet (sama seperti di notebook) ──
-def compute_indicators_prophet(series: pd.Series) -> pd.DataFrame:
-    df_ind = pd.DataFrame({'Close': series})
-    df_ind['MA_5']   = df_ind['Close'].rolling(window=5).mean()
-    delta            = df_ind['Close'].diff()
-    gain             = delta.where(delta > 0, 0).rolling(14).mean()
-    loss             = (-delta.where(delta < 0, 0)).rolling(14).mean()
-    df_ind['RSI_14'] = 100 - (100 / (1 + gain / loss))
-    ema_12           = df_ind['Close'].ewm(span=12, adjust=False).mean()
-    ema_26           = df_ind['Close'].ewm(span=26, adjust=False).mean()
-    df_ind['MACD']   = ema_12 - ema_26
-    return df_ind.drop(columns='Close')
-
-# Hitung indikator dari data historis + n_days ke depan
-# Gunakan data historis terakhir sebagai seed indikator
-hist_for_ind    = close_recent.copy()
-
-# Kita perlu nilai indikator untuk future_dates → tidak tersedia Close asli
-# Pendekatan: gunakan prediksi LSTM sebagai proxy Close untuk hitung indikator future
-close_extended  = pd.concat([
-    hist_for_ind,
-    pd.Series(lstm_future_preds, index=future_dates)
-])
-
-ind_hist     = compute_indicators_prophet(close_recent).dropna()
-last_ind     = ind_hist.iloc[-1]   # nilai MA_5, RSI_14, MACD terakhir yang valid
-
-# Gunakan nilai konstan terakhir untuk semua hari future
-future_prophet_df = pd.DataFrame({
-    'ds'     : future_dates,
-    'MA_5'   : last_ind['MA_5'],
-    'RSI_14' : last_ind['RSI_14'],
-    'MACD'   : last_ind['MACD'],
-})
-
-forecast_future      = model_prophet.predict(future_prophet_df)
+# ── Prophet Future Forecast ───────────────────────────────────
+future_prophet_df = pd.DataFrame({'ds': future_dates})
+forecast_future   = model_prophet.predict(future_prophet_df)
 prophet_future_preds = forecast_future['yhat'].values
 
-# ══════════════════════════════════════════════════════════════
-# VISUALISASI FORECAST FUTURE
-# ══════════════════════════════════════════════════════════════
-history_tail = close_recent.iloc[-60:]
+# ── Visualisasi Future ────────────────────────────────────────
+# Tampilkan 60 hari historis terakhir sebagai konteks
+history_tail  = close_recent.iloc[-60:]
 
 fig, ax = plt.subplots(figsize=(14, 4))
 
+# Historis
 ax.plot(history_tail.index, history_tail.values,
         label='Historis (60 hari terakhir)', color='steelblue', linewidth=1)
 
-# Garis pemisah hari terakhir data vs prediksi
+# Garis pemisah
 ax.axvline(x=last_date, color='gray', linestyle=':', linewidth=1, alpha=0.7)
 
+# LSTM future
 ax.plot(future_dates, lstm_future_preds,
-        label=f'LSTM ({n_days} hari ke depan)',    color='darkorange',
+        label=f'LSTM ({n_days} hari ke depan)', color='darkorange',
         linewidth=1.3, linestyle='--', marker='o', markersize=4)
 
+# Prophet future
 ax.plot(future_dates, prophet_future_preds,
         label=f'Prophet ({n_days} hari ke depan)', color='mediumseagreen',
         linewidth=1.3, linestyle='--', marker='s', markersize=4)
 
+# Confidence interval Prophet
 ax.fill_between(
     future_dates,
     forecast_future['yhat_lower'].values,
@@ -318,21 +223,19 @@ ax.grid(True, alpha=0.3)
 fig.tight_layout()
 st.pyplot(fig)
 
-# ══════════════════════════════════════════════════════════════
-# TABEL HASIL FORECAST
-# ══════════════════════════════════════════════════════════════
+# ── Tabel Hasil Forecast ──────────────────────────────────────
 st.markdown("#### Tabel Prediksi")
 
 future_table = pd.DataFrame({
-    'Tanggal'            : future_dates.strftime('%Y-%m-%d'),
-    'LSTM'               : lstm_future_preds.round(2),
-    'Prophet'            : prophet_future_preds.round(2),
-    'CI Lower (Prophet)' : forecast_future['yhat_lower'].values.round(2),
-    'CI Upper (Prophet)' : forecast_future['yhat_upper'].values.round(2),
+    'Tanggal'       : future_dates.strftime('%Y-%m-%d'),
+    'LSTM'          : lstm_future_preds.round(2),
+    'Prophet'       : prophet_future_preds.round(2),
+    'CI Lower (Prophet)': forecast_future['yhat_lower'].values.round(2),
+    'CI Upper (Prophet)': forecast_future['yhat_upper'].values.round(2),
 })
 st.dataframe(future_table, use_container_width=True, hide_index=True)
 
 st.caption(
-    "LSTM menggunakan prediksi recursive — akurasi menurun seiring bertambahnya hari. "
-    "Prophet memproyeksikan tren dan seasonality; indikator teknikal future dihitung dari prediksi LSTM sebagai proxy."
+    "⚠️ LSTM menggunakan prediksi recursive — akurasi menurun seiring bertambahnya hari. "
+    "Prophet hanya memproyeksikan tren dan seasonality tanpa memperhitungkan kondisi pasar terkini."
 )

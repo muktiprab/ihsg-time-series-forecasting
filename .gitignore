@@ -1,10 +1,5 @@
+models/
 venv/
 __pycache__/
-*.pkl
-*.keras
-*.h5
-*.csv
-*.xlsx
-data/
-models/
+*.pyc
 .env
