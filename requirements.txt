@@ -4,6 +4,6 @@ numpy
 matplotlib
 seaborn
 scikit-learn
-tensorflow-cpu
+tensorflow==2.20.0
 prophet
 requests
