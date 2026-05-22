@@ -4,6 +4,6 @@ numpy
 matplotlib
 seaborn
 scikit-learn
-tensorflow-cpu==2.15.0
-neuralprophet
-requests
+tensorflow-cpu
+prophet
+requestsdel runtime.txt
