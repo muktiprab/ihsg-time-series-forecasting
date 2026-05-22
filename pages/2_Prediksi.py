@@ -176,8 +176,9 @@ current_seq  = seed_scaled.flatten().tolist()
 
 lstm_future_preds = []
 for _ in range(n_days):
-    x_input = np.array(current_seq[-LOOK_BACK:]).reshape(1, LOOK_BACK, 1)
-    pred_scaled = model_lstm_future.predict(x_input, verbose=0)[0][0]
+    seq = np.array(current_seq[-LOOK_BACK:], dtype=np.float32)  # shape (60,)
+    x_input = seq.reshape((1, LOOK_BACK, 1))                    # shape (1, 60, 1)
+    pred_scaled = float(model_lstm_future.predict(x_input, verbose=0)[0][0])
     lstm_future_preds.append(pred_scaled)
     current_seq.append(pred_scaled)
 
