@@ -6,4 +6,4 @@ seaborn
 scikit-learn
 tensorflow-cpu
 prophet
-requestsdel runtime.txt
+requests
