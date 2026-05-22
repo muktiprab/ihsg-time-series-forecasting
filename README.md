@@ -111,7 +111,7 @@ streamlit run app.py
 
 Eksplorasi data dan training model dilakukan di Google Colab:
 
-[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/muktiprab/ihsg-time-series-forecasting/blob/main/Explorasi_dataset_IHSG.ipynb)
+[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/muktiprab/ihsg-time-series-forecasting/blob/eksplorasi/Modelling_dataset_IHSG.ipynb)
 
 ---
 
