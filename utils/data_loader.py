@@ -6,7 +6,6 @@ import numpy as np
 import streamlit as st
 from tensorflow.keras.models import load_model
 
-# ── Google Drive file IDs ─────────────────────────────────────
 DRIVE_FILES = {
     'lstm_meta.pkl'    : '1tuOWKn6YTTxXuFAXRvTMOcKT8GXg2F0o',
     'lstm_model.keras' : '1SurytprBGVGCAdglf-DTcbua-uHdBIdA',
@@ -22,17 +21,13 @@ DATA_URL  = "https://raw.githubusercontent.com/MutiaraCR/Dataset/refs/heads/main
 
 
 def _download_file(file_id: str, dest_path: str):
-    """Download file dari Google Drive ke dest_path."""
-    url = f"https://drive.google.com/uc?export=download&id={file_id}"
+    url     = f"https://drive.google.com/uc?export=download&id={file_id}"
     session = requests.Session()
     response = session.get(url, stream=True)
-
-    # Google Drive kadang kirim confirm page untuk file besar
     for key, value in response.cookies.items():
         if key.startswith('download_warning'):
             response = session.get(url, params={'confirm': value}, stream=True)
             break
-
     with open(dest_path, 'wb') as f:
         for chunk in response.iter_content(chunk_size=32768):
             if chunk:
@@ -40,7 +35,6 @@ def _download_file(file_id: str, dest_path: str):
 
 
 def _ensure_models():
-    """Download semua model jika belum ada di /tmp."""
     os.makedirs(MODEL_DIR, exist_ok=True)
     for filename, file_id in DRIVE_FILES.items():
         dest = os.path.join(MODEL_DIR, filename)
@@ -48,7 +42,6 @@ def _ensure_models():
             _download_file(file_id, dest)
 
 
-# ── Load Data ─────────────────────────────────────────────────
 @st.cache_data
 def load_data():
     df = pd.read_csv(DATA_URL)
@@ -82,7 +75,6 @@ def load_data():
     return df, df2
 
 
-# ── Load Models ───────────────────────────────────────────────
 @st.cache_resource
 def load_lstm_results():
     _ensure_models()
@@ -91,12 +83,15 @@ def load_lstm_results():
 
 
 @st.cache_resource
-def load_lstm_model_and_scaler():
+def load_lstm_model_and_scalers():
+    """Return (model, scaler_4fitur, scaler_close)"""
     _ensure_models()
-    model  = load_model(os.path.join(MODEL_DIR, 'lstm_model.keras'))
+    model = load_model(os.path.join(MODEL_DIR, 'lstm_model.keras'))
     with open(os.path.join(MODEL_DIR, 'scaler.pkl'), 'rb') as f:
         scaler = pickle.load(f)
-    return model, scaler
+    with open(os.path.join(MODEL_DIR, 'scaler_close.pkl'), 'rb') as f:
+        scaler_close = pickle.load(f)
+    return model, scaler, scaler_close
 
 
 @st.cache_resource
