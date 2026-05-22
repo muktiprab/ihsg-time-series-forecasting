@@ -160,8 +160,14 @@ last_date    = close_recent.index[-1]
 future_dates = pd.bdate_range(start=last_date + pd.Timedelta(days=1), periods=n_days)
 
 # ── LSTM Recursive Forecast ───────────────────────────────────
+from sklearn.preprocessing import MinMaxScaler
+
 LOOK_BACK = lstm_results.get('look_back', 60)
-model_lstm_future, scaler_future = load_lstm_model_and_scaler()
+model_lstm_future, _ = load_lstm_model_and_scaler()
+
+# Fit scaler baru dari data historis langsung — hindari sklearn version mismatch
+scaler_future = MinMaxScaler()
+scaler_future.fit(close_recent.values.reshape(-1, 1))
 
 # Seed: 60 hari terakhir dari data historis
 seed_prices  = close_recent.values[-LOOK_BACK:].reshape(-1, 1)
